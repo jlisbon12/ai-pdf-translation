@@ -1,0 +1,18 @@
+version: '3.8'
+services:
+  pdf-upload:
+    build: ./pdf-upload
+    ports:
+      - "4000:4000"
+  ocr:
+    build: ./ocr
+    ports:
+      - "4001:4001"
+  translation:
+    build: ./translation
+    ports:
+      - "4002:4002"
+  ui:
+    build: ./ui
+    ports:
+      - "3000:3000"
