@@ -10,6 +10,7 @@ const unlink = promisify(fs.unlink);
 const exec = promisify(require("child_process").exec);
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const axios = require("axios");
+const bodyParser = require("body-parser");
 
 const app = express();
 const port = 4001;
@@ -17,6 +18,10 @@ const port = 4001;
 process.on("unhandledRejection", (error) => {
   console.error("Unhandled promise rejection:", error);
 });
+
+// Increase payload size limit
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 async function getSecret() {
   const client = new SecretManagerServiceClient();
@@ -47,7 +52,6 @@ async function getSecret() {
   app.get("/process/:filename", async (req, res) => {
     try {
       const filename = req.params.filename;
-      const targetLanguage = req.query.targetLanguage || "en"; // Set default target language to English
       const file = bucket.file(filename);
       const [fileExists] = await file.exists();
 
@@ -109,11 +113,16 @@ async function getSecret() {
       const originalLanguage = detection.language;
 
       // Send OCR results to Translation service
-      const response = await axios.post("http://localhost:4002/translate", {
+      const payload = {
         ocrData: ocrResults,
-        targetLanguage: targetLanguage,
         originalLanguage: originalLanguage,
-      });
+      };
+
+      const response = await axios.post(
+        "http://localhost:4002/translate?targetLanguage=" +
+          encodeURIComponent(req.query.targetLanguage || "en"),
+        payload
+      );
 
       res.status(200).json(response.data);
     } catch (error) {

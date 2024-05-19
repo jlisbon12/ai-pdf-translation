@@ -8,7 +8,8 @@ const bodyParser = require("body-parser");
 const app = express();
 const port = 4002;
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({ limit: "50mb" }));
+app.use(bodyParser.urlencoded({ limit: "50mb", extended: true }));
 
 process.on("unhandledRejection", (error) => {
   console.error("Unhandled promise rejection:", error);
@@ -29,7 +30,7 @@ async function getSecret() {
   const storage = new Storage({
     credentials: key,
   });
-  const bucketName = "pdf-translation-service-bucket";
+  const bucketName = "pdf_upload_bucket-1";
   const bucket = storage.bucket(bucketName);
 
   const translate = new Translate({
@@ -38,13 +39,12 @@ async function getSecret() {
 
   app.post("/translate", async (req, res) => {
     try {
-      const { ocrData, targetLanguage, originalLanguage } = req.body;
-      if (!ocrData || !targetLanguage || !originalLanguage) {
+      const { ocrData, originalLanguage } = req.body;
+      const targetLanguage = req.query.targetLanguage || "en"; // Set default target language to English
+      if (!ocrData || !originalLanguage) {
         return res
           .status(400)
-          .send(
-            "OCR data, target language, and original language must be provided."
-          );
+          .send("OCR data and original language must be provided.");
       }
 
       const translations = await Promise.all(
