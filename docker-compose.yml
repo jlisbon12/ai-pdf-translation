@@ -1,29 +1,32 @@
+version: '3.8'
 services:
-  pdf-upload:
-    build:
-      context: ./server/pdf-upload
-      dockerfile: Dockerfile
-    ports:
-      - "4000:4000"
-    environment:
-      - GOOGLE_APPLICATION_CREDENTIALS=/app/ai-pdf-translation-service-10642063de1f.json
-    volumes:
-      - ./server/keys/ai-pdf-translation-service-10642063de1f.json:/app/ai-pdf-translation-service-10642063de1f.json:ro
-  ocr:
-    build:
-      context: ./server/ocr
-      dockerfile: Dockerfile
-    ports:
-      - "4001:4001"
-  translation:
-    build:
-      context: ./server/translation
-      dockerfile: Dockerfile
-    ports:
-      - "4002:4002"
-  ui:
-    build:
-      context: ./client
-      dockerfile: Dockerfile
+  client:
+    build: ./client
     ports:
       - "3000:3000"
+    environment:
+      - NODE_ENV=development
+
+  pdf-upload:
+    build: ./server/pdf-upload
+    volumes:
+      - ./server/pdf-upload/uploads:/app/uploads
+    environment:
+      - NODE_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/keys/ai-pdf-translation-service-10642063de1f.json
+    depends_on:
+      - ocr
+
+  ocr:
+    build: ./server/ocr
+    environment:
+      - NODE_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/keys/ai-pdf-translation-service-10642063de1f.json
+    depends_on:
+      - translation
+
+  translation:
+    build: ./server/translation
+    environment:
+      - NODE_ENV=development
+      - GOOGLE_APPLICATION_CREDENTIALS=/app/keys/ai-pdf-translation-service-10642063de1f.json
