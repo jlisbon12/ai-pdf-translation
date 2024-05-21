@@ -1,6 +1,8 @@
 const express = require("express");
+const cors = require("cors");
 const multer = require("multer");
 const { Storage } = require("@google-cloud/storage");
+const { Firestore } = require("@google-cloud/firestore");
 const { SecretManagerServiceClient } = require("@google-cloud/secret-manager");
 const path = require("path");
 const fs = require("fs");
@@ -24,13 +26,14 @@ async function getSecret() {
 
 (async () => {
   const key = await getSecret();
-  const storage = new Storage({
-    credentials: key,
-  });
+  const storage = new Storage({ credentials: key });
+  const firestore = new Firestore({ credentials: key });
   const bucketName = "pdf_upload_bucket-1";
   const bucket = storage.bucket(bucketName);
 
   const upload = multer({ dest: "uploads/" });
+
+  app.use(cors({ origin: "http://localhost:3000" }));
 
   app.post("/upload", upload.single("file"), async (req, res) => {
     if (!req.file) {
@@ -41,13 +44,53 @@ async function getSecret() {
     const destination = req.file.originalname;
 
     try {
-      await bucket.upload(filePath, { destination });
-      fs.unlinkSync(filePath); // Remove file from local storage after upload
+      await bucket.upload(filePath, { destination, public: true });
+      fs.unlinkSync(filePath);
 
-      res.status(200).send("File uploaded successfully");
+      const fileUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;
+
+      const docRef = firestore.collection("pdfs").doc(req.file.filename);
+      await docRef.set({
+        file_key: req.file.filename,
+        file_name: destination,
+        upload_time: new Date(),
+        pdf_url: fileUrl, // Add PDF URL
+      });
+
+      res.status(200).json({
+        file_key: req.file.filename,
+        file_name: destination,
+        pdf_url: fileUrl, // Return PDF URL
+      });
     } catch (error) {
       console.error("Error uploading file:", error);
       res.status(500).send("Error uploading file");
+    }
+  });
+
+  app.get("/pdfs", async (req, res) => {
+    try {
+      const pdfsSnapshot = await firestore.collection("pdfs").get();
+      const pdfs = pdfsSnapshot.docs.map((doc) => doc.data());
+      res.status(200).json(pdfs);
+    } catch (error) {
+      console.error("Error fetching PDFs:", error);
+      res.status(500).send("Error fetching PDFs");
+    }
+  });
+
+  app.get("/pdfs/:pdfId", async (req, res) => {
+    const { pdfId } = req.params;
+
+    try {
+      const doc = await firestore.collection("pdfs").doc(pdfId).get();
+      if (!doc.exists) {
+        return res.status(404).send("PDF not found");
+      }
+      res.status(200).json(doc.data());
+    } catch (error) {
+      console.error("Error retrieving PDF:", error);
+      res.status(500).send("Error retrieving PDF");
     }
   });
 

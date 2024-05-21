@@ -49,10 +49,10 @@ async function getSecret() {
     credentials: key,
   });
 
-  app.get("/process/:filename", async (req, res) => {
+  app.post("/process", async (req, res) => {
     try {
-      const filename = req.params.filename;
-      const file = bucket.file(filename);
+      const { file_key, file_name } = req.body;
+      const file = bucket.file(file_name);
       const [fileExists] = await file.exists();
 
       if (!fileExists) {
@@ -66,7 +66,7 @@ async function getSecret() {
       }
 
       // Download the file
-      const localFilePath = path.join(downloadsDir, filename);
+      const localFilePath = path.join(downloadsDir, file_key);
       await file.download({ destination: localFilePath });
 
       // Convert PDF pages to images using `pdftoppm`
@@ -116,12 +116,18 @@ async function getSecret() {
       const payload = {
         ocrData: ocrResults,
         originalLanguage: originalLanguage,
+        file_key: file_key,
+        file_name: file_name,
       };
 
       const response = await axios.post(
-        "http://localhost:4002/translate?targetLanguage=" +
-          encodeURIComponent(req.query.targetLanguage || "en"),
-        payload
+        "http://localhost:4002/translate",
+        payload,
+        {
+          params: {
+            targetLanguage: req.query.targetLanguage || "en",
+          },
+        }
       );
 
       res.status(200).json(response.data);

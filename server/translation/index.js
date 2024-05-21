@@ -39,7 +39,7 @@ async function getSecret() {
 
   app.post("/translate", async (req, res) => {
     try {
-      const { ocrData, originalLanguage } = req.body;
+      const { ocrData, originalLanguage, file_key, file_name } = req.body;
       const targetLanguage = req.query.targetLanguage || "en"; // Set default target language to English
       if (!ocrData || !originalLanguage) {
         return res
