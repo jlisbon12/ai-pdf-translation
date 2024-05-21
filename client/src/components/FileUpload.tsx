@@ -10,23 +10,6 @@ import { useRouter } from "next/navigation";
 const FileUpload = () => {
   const router = useRouter();
   const [uploading, setUploading] = React.useState(false);
-  const { mutate, status } = useMutation({
-    mutationFn: async ({
-      file_key,
-      file_name,
-    }: {
-      file_key: string;
-      file_name: string;
-    }) => {
-      const response = await axios.post("/api/create-process", {
-        file_key,
-        file_name,
-      });
-      return response.data;
-    },
-  });
-
-  const isLoading = status === "pending";
 
   const { getRootProps, getInputProps } = useDropzone({
     accept: { "application/pdf": [".pdf"] },
@@ -59,19 +42,12 @@ const FileUpload = () => {
           return;
         }
 
-        mutate(data, {
-          onSuccess: (data) => {
-            toast.success("File uploaded and translation created successfully");
-            if (router) {
-              router.push(`/pdf/${data.file_key}`);
-            } else {
-              console.error("Router is not available");
-            }
-          },
-          onError: () => {
-            toast.error("Error creating translation");
-          },
-        });
+        toast.success("File uploaded successfully");
+        if (router) {
+          router.push(`/pdf/${data.file_key}`);
+        } else {
+          console.error("Router is not available");
+        }
       } catch (error) {
         console.error("Error uploading file:", error);
         toast.error("Error uploading file");
@@ -90,7 +66,7 @@ const FileUpload = () => {
         })}
       >
         <input {...getInputProps()} />
-        {uploading || isLoading ? (
+        {uploading ? (
           <>
             <Loader2 className="h-10 w-10 text-blue-500 animate-spin" />
             <p className="mt-2 text-sm text-slate-400">

@@ -31,7 +31,7 @@ const SideBar = () => {
   if (error) return <p>Error loading PDFs</p>;
 
   return (
-    <div className="w-full max-h-screen overflow-scroll soff p-4 text-gray-200 bg-gray-900">
+    <div className="w-full max-h-screen overflow-scroll soff p-4 text-slate-200 bg-slate-900">
       <Link href="/">
         <Button className="w-full border-dashed border-white border">
           <PlusCircle className="mr-2 w-4 h-4" />
@@ -43,7 +43,7 @@ const SideBar = () => {
           <Link key={pdf.file_key} href={`/pdf/${pdf.file_key}`}>
             <div
               className={cn("rounded-lg p-3 text-slate-300 flex items-center", {
-                "bg-blue-600 text-white": pdf.file_key == pdf.file_key,
+                "bg-sky-600 text-white": pdf.file_key == pdf.file_key,
                 "hover:text-white": pdf.file_key !== pdf.file_key,
               })}
             >

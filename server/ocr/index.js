@@ -78,6 +78,7 @@ async function getSecret() {
         .readdirSync(downloadsDir)
         .filter((file) => file.endsWith(".png"));
       const ocrResults = [];
+      const images = [];
 
       for (const imageFile of imageFiles) {
         const imagePath = path.join(downloadsDir, imageFile);
@@ -93,6 +94,10 @@ async function getSecret() {
         }));
 
         ocrResults.push(...structuredDetections);
+
+        // Read image file data
+        const imageData = fs.readFileSync(imagePath, { encoding: "base64" });
+        images.push(`data:image/png;base64,${imageData}`);
 
         // Remove the image file after processing
         await unlink(imagePath);
@@ -112,25 +117,12 @@ async function getSecret() {
       const [detection] = await translateClient.detect(descriptions);
       const originalLanguage = detection.language;
 
-      // Send OCR results to Translation service
-      const payload = {
-        ocrData: ocrResults,
-        originalLanguage: originalLanguage,
-        file_key: file_key,
-        file_name: file_name,
-      };
-
-      const response = await axios.post(
-        "http://localhost:4002/translate",
-        payload,
-        {
-          params: {
-            targetLanguage: req.query.targetLanguage || "en",
-          },
-        }
-      );
-
-      res.status(200).json(response.data);
+      // Send OCR results and images to the client
+      res.status(200).json({
+        ocrResults,
+        originalLanguage,
+        images,
+      });
     } catch (error) {
       console.error("Error processing file:", error);
       res.status(500).send(`Error processing file: ${error.message}`);

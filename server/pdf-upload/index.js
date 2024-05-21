@@ -44,7 +44,7 @@ async function getSecret() {
     const destination = req.file.originalname;
 
     try {
-      await bucket.upload(filePath, { destination, public: true });
+      await bucket.upload(filePath, { destination });
       fs.unlinkSync(filePath);
 
       const fileUrl = `https://storage.googleapis.com/${bucketName}/${destination}`;

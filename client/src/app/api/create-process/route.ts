@@ -4,7 +4,7 @@ import axios from "axios";
 export async function POST(req: Request) {
   const { file_key, file_name } = await req.json();
   try {
-    const response = await axios.post("http://localhost:4000/process", {
+    const response = await axios.post("http://localhost:4001/process", {
       file_key,
       file_name,
     });

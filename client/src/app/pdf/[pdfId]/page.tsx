@@ -6,6 +6,9 @@ import axios from "axios";
 import { useParams } from "next/navigation";
 import PDFViewer from "@/components/PDFViewer";
 import SideBar from "@/components/SideBar";
+import { Button } from "@/components/ui/button";
+import { FileScan } from "lucide-react";
+import OCRProcess from "@/components/OCRProcess";
 
 interface PDFData {
   pdf_url: string;
@@ -20,6 +23,8 @@ const PDFPage = () => {
   const [pdfData, setPdfData] = useState<PDFData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [ocrData, setOcrData] = useState<any>(null);
+  const [isOcrOpen, setIsOcrOpen] = useState(false);
 
   useEffect(() => {
     if (!pdfId) {
@@ -40,6 +45,23 @@ const PDFPage = () => {
     fetchPDFData();
   }, [pdfId]);
 
+  const handleOcrProcess = async () => {
+    if (!pdfData) {
+      return;
+    }
+
+    try {
+      const response = await axios.post("/api/create-process", {
+        file_key: pdfData.file_key,
+        file_name: pdfData.file_name,
+      });
+      setOcrData(response.data);
+      setIsOcrOpen(true);
+    } catch (error) {
+      setError("Error processing OCR");
+    }
+  };
+
   if (loading) {
     return <p>Loading...</p>;
   }
@@ -58,9 +80,20 @@ const PDFPage = () => {
         <div className="flex max-w-xs">
           <SideBar />
         </div>
-        <div className="max-h-screen p-4 oveflow-scroll flex-[5]">
+        <div className="max-h-screen overflow-scroll flex-[5]">
           <PDFViewer pdf_url={pdfData.pdf_url || ""} />
+          <Button onClick={handleOcrProcess} className="absolute top-4 right-4">
+            Process OCR
+            <FileScan className="ml-2 h-6 w-6" />
+          </Button>
         </div>
+        {ocrData && (
+          <OCRProcess
+            isOpen={isOcrOpen}
+            onClose={() => setIsOcrOpen(false)}
+            ocrData={ocrData}
+          />
+        )}
       </div>
     </div>
   );
