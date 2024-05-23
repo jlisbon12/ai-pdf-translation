@@ -61,7 +61,7 @@ async function getSecret() {
         })
       );
 
-      res.status(200).json(translations);
+      res.status(200).json({ translations });
     } catch (error) {
       console.error("Error translating file:", error);
       res.status(500).send(`Error translating file: ${error.message}`);

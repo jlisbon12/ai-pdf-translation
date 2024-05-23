@@ -80,7 +80,7 @@ const PDFPage = () => {
         <div className="flex max-w-xs">
           <SideBar />
         </div>
-        <div className="max-h-screen overflow-scroll flex-[5]">
+        <div className="max-h-screen overflow-scroll flex-[5] relative">
           <PDFViewer pdf_url={pdfData.pdf_url || ""} />
           <Button onClick={handleOcrProcess} className="absolute top-4 right-4">
             Process OCR
@@ -88,11 +88,15 @@ const PDFPage = () => {
           </Button>
         </div>
         {ocrData && (
-          <OCRProcess
-            isOpen={isOcrOpen}
-            onClose={() => setIsOcrOpen(false)}
-            ocrData={ocrData}
-          />
+          <div className="absolute">
+            <OCRProcess
+              isOpen={isOcrOpen}
+              onClose={() => setIsOcrOpen(false)}
+              ocrData={ocrData}
+              fileKey={pdfData.file_key}
+              fileName={pdfData.file_name}
+            />
+          </div>
         )}
       </div>
     </div>

@@ -2,18 +2,20 @@ import { NextResponse } from "next/server";
 import axios from "axios";
 
 export async function POST(req: Request) {
-  const { file_key, file_name } = await req.json();
+  const { file_key, file_name, ocrData, targetLanguage } = await req.json();
 
   try {
     const response = await axios.post(
-      "http://localhost:4001/process",
+      "http://localhost:4002/translate",
       {
+        ocrData: ocrData.ocrResults,
+        originalLanguage: ocrData.originalLanguage,
         file_key,
         file_name,
       },
       {
         params: {
-          targetLanguage: "es", // Default target language, can be modified
+          targetLanguage,
         },
       }
     );
