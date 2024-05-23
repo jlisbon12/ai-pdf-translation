@@ -13,7 +13,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import axios from "axios";
@@ -44,93 +43,93 @@ const OCRProcess = ({
   fileKey,
   fileName,
 }: OCRProcessProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [originalLanguage, setOriginalLanguage] = useState(
-    ocrData.originalLanguage
-  );
+  const canvasRef = useRef<HTMLCanvasElement[]>([]);
+  const [originalLanguage] = useState(ocrData.originalLanguage);
   const [targetLanguage, setTargetLanguage] = useState("en");
   const [translatedData, setTranslatedData] = useState<any[]>([]);
+  const [displayText, setDisplayText] = useState<string[]>([]);
+  const [currentPage, setCurrentPage] = useState(0);
 
   useEffect(() => {
-    if (ocrData.images.length > 0) {
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext("2d");
-      if (canvas && ctx) {
-        const image = new Image();
-        image.onload = () => {
-          canvas.width = image.width;
-          canvas.height = image.height;
-          ctx.drawImage(image, 0, 0);
-          ocrData.ocrResults.slice(1).forEach((result) => {
-            const vertices = result.boundingPoly.vertices;
-            if (vertices.length === 4) {
-              ctx.beginPath();
-              ctx.moveTo(vertices[0].x, vertices[0].y);
-              for (let i = 1; i < vertices.length; i++) {
-                ctx.lineTo(vertices[i].x, vertices[i].y);
-              }
-              ctx.closePath();
-              ctx.lineWidth = 2;
-              ctx.strokeStyle = "red";
-              ctx.stroke();
+    const canvas = canvasRef.current[currentPage];
+    const ctx = canvas?.getContext("2d");
+    if (canvas && ctx) {
+      const image = new Image();
+      image.onload = () => {
+        canvas.width = image.width;
+        canvas.height = image.height;
+        ctx.drawImage(image, 0, 0);
+        ocrData.ocrResults.forEach((result) => {
+          const vertices = result.boundingPoly.vertices;
+          if (vertices.length === 4) {
+            ctx.beginPath();
+            ctx.moveTo(vertices[0].x, vertices[0].y);
+            for (let i = 1; i < vertices.length; i++) {
+              ctx.lineTo(vertices[i].x, vertices[i].y);
             }
-          });
-        };
-        image.src = ocrData.images[0];
-      }
+            ctx.closePath();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "red";
+            ctx.stroke();
+          }
+        });
+      };
+      image.src = ocrData.images[currentPage];
     }
-  }, [ocrData]);
+
+    // Set the initial display text to the original OCR results
+    setDisplayText(ocrData.ocrResults.map((result) => result.description));
+  }, [ocrData, currentPage]);
 
   useEffect(() => {
     if (translatedData.length > 0) {
-      const canvas = canvasRef.current;
+      const canvas = canvasRef.current[currentPage];
       const ctx = canvas?.getContext("2d");
       if (canvas && ctx) {
-        // Clear previous drawings
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-        // Redraw the image
         const image = new Image();
         image.onload = () => {
           ctx.drawImage(image, 0, 0);
-          translatedData.slice(1).forEach((item) => {
-            const vertices = item.boundingPoly.vertices;
-            if (vertices.length === 4) {
-              // Calculate width and height of the box
-              const width = vertices[1].x - vertices[0].x;
-              const height = vertices[3].y - vertices[0].y;
+          translatedData[currentPage].forEach(
+            (item: {
+              boundingPoly: { vertices: any };
+              description: string;
+            }) => {
+              const vertices = item.boundingPoly.vertices;
+              if (vertices.length === 4) {
+                const width = vertices[1].x - vertices[0].x;
+                const height = vertices[3].y - vertices[0].y;
 
-              // Clear the box area
-              ctx.fillStyle = "white";
-              ctx.fillRect(vertices[0].x, vertices[0].y, width, height);
+                ctx.fillStyle = "white";
+                ctx.fillRect(vertices[0].x, vertices[0].y, width, height);
 
-              // Draw the bounding box
-              ctx.beginPath();
-              ctx.moveTo(vertices[0].x, vertices[0].y);
-              for (let i = 1; i < vertices.length; i++) {
-                ctx.lineTo(vertices[i].x, vertices[i].y);
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                for (let i = 1; i < vertices.length; i++) {
+                  ctx.lineTo(vertices[i].x, vertices[i].y);
+                }
+                ctx.closePath();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = "red";
+                ctx.stroke();
+
+                ctx.fillStyle = "blue";
+                ctx.font = "12px Arial";
+                ctx.textBaseline = "top";
+                ctx.fillText(
+                  item.description,
+                  vertices[0].x + 2,
+                  vertices[0].y + 2
+                );
               }
-              ctx.closePath();
-              ctx.lineWidth = 2;
-              ctx.strokeStyle = "red";
-              ctx.stroke();
-
-              // Draw the text inside the box
-              ctx.fillStyle = "blue"; // Set text color
-              ctx.font = "12px Arial"; // Set font size and family
-              ctx.textBaseline = "top";
-              ctx.fillText(
-                item.description,
-                vertices[0].x + 2,
-                vertices[0].y + 2
-              );
             }
-          });
+          );
         };
-        image.src = ocrData.images[0];
+        image.src = ocrData.images[currentPage];
       }
     }
-  }, [translatedData, ocrData]);
+  }, [translatedData, currentPage, ocrData]);
 
   const handleTranslate = async () => {
     try {
@@ -142,6 +141,11 @@ const OCRProcess = ({
       });
       toast.success("Translation completed successfully");
       setTranslatedData(response.data.translations);
+      setDisplayText(
+        response.data.translations.map(
+          (item: { description: any }) => item.description
+        )
+      );
     } catch (error) {
       toast.error("Error translating file");
       console.error("Error translating file:", error);
@@ -151,7 +155,7 @@ const OCRProcess = ({
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="w-[90vw] h-[90vh] max-w-full flex flex-col overflow-auto">
-        <DialogHeader className="w-full mt-4">
+        <DialogHeader className="flex flex-row w-full mt-4">
           <DialogTitle>OCR Process Results</DialogTitle>
         </DialogHeader>
         <div className="absolute top-4 left-1/2 transform -translate-x-1/2 flex items-center space-x-4">
@@ -189,24 +193,31 @@ const OCRProcess = ({
           </Button>
         </div>
         <div className="flex flex-row h-full w-full">
-          <div className="w-[50%] h-[100%] flex-1 p-4 justify-center items-center">
+          <div className="w-[50%] h-[100%] flex-1 flex-col p-4 justify-center items-center">
             <canvas
-              ref={canvasRef}
+              ref={(el) => {
+                if (el) canvasRef.current[currentPage] = el;
+              }}
               className="max-w-full max-h-full border border-gray-300"
+            />
+            <Pagination
+              className="flex flex-start translate-x-[12rem] my-4"
+              currentPage={currentPage + 1}
+              totalPages={ocrData.images.length}
+              onPageChange={(page: number) => setCurrentPage(page - 1)}
             />
           </div>
           <ScrollArea className="flex-1 p-4 h-full">
             <h2 className="text-xl font-semibold mb-4">OCR Text</h2>
-            {translatedData.length > 0 ? (
-              translatedData.map((item, index) => (
-                <p key={index}>{item.description}</p>
-              ))
+            {displayText.length > 0 ? (
+              displayText.map((text, index) => <p key={index}>{text}</p>)
             ) : (
               <p>{ocrData.ocrResults[0].description}</p>
             )}
           </ScrollArea>
         </div>
-        <Button onClick={onClose} className="mt-4">
+
+        <Button onClick={onClose} className="mt-10">
           Close
         </Button>
       </DialogContent>
@@ -215,3 +226,43 @@ const OCRProcess = ({
 };
 
 export default OCRProcess;
+
+interface PaginationProps {
+  currentPage: number;
+  totalPages: number;
+  onPageChange: (page: number) => void;
+  className?: string;
+}
+
+const Pagination = ({
+  currentPage,
+  totalPages,
+  onPageChange,
+  className,
+}: PaginationProps) => {
+  const handlePrevious = () => {
+    if (currentPage > 1) {
+      onPageChange(currentPage - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      onPageChange(currentPage + 1);
+    }
+  };
+
+  return (
+    <div className={`flex items-center space-x-4 ${className}`}>
+      <Button onClick={handlePrevious} disabled={currentPage === 1}>
+        Previous
+      </Button>
+      <span>
+        Page {currentPage} of {totalPages}
+      </span>
+      <Button onClick={handleNext} disabled={currentPage === totalPages}>
+        Next
+      </Button>
+    </div>
+  );
+};
