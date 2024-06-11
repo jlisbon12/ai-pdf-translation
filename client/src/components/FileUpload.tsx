@@ -6,9 +6,11 @@ import { useDropzone } from "react-dropzone";
 import axios from "axios";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
+import { useUser } from "@clerk/nextjs"; // Import useUser hook from Clerk
 
 const FileUpload = () => {
   const router = useRouter();
+  const { user } = useUser(); // Get the user from Clerk
   const [uploading, setUploading] = React.useState(false);
 
   const { getRootProps, getInputProps } = useDropzone({
@@ -21,11 +23,17 @@ const FileUpload = () => {
         return;
       }
 
+      if (!user) {
+        toast.error("User not found");
+        return;
+      }
+
       setUploading(true);
 
       try {
         const formData = new FormData();
         formData.append("file", file);
+        formData.append("userId", user.id); // Include userId in the form data
 
         const { data } = await axios.post(
           "http://localhost:4000/upload",
